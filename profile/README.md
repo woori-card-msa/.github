@@ -5,10 +5,9 @@
 
 
 ---
-
 # 시연 가이드
 
-> **Base URL:** `http://172.30.1.33:8080`  (본인의 와이파이 또는 이더넷 ip 환경으로 변경 필요)     
+> **Base URL:** `http://172.30.1.33:8080`  (본인의 와이파이 또는 이더넷 ip 환경으로 변경 필요)   
 > **공통 헤더:** `Authorization: Bearer {access_token}`
 
 ---
@@ -25,7 +24,8 @@
 | 3.2.1 | `POST` | `/api/settlements/trigger` | 수동 정산 실행 |
 | 3.2.2 | `GET` | `/api/settlements` | 날짜별 정산 조회 |
 | 3.2.3 | `GET` | `/api/settlements/merchant/{id}` | 가맹점별 정산 조회 |
-| 3.3 | `GET` | `/api/billing/{cardNumber}` | 청구 내역 조회 |
+| 3.3.1 | `POST` | `/api/billing/monthly` | 청구 생성 |
+| 3.3.2 | `GET` | `/api/billing/{cardNumber}` | 청구 내역 조회 |
 
 ---
 
@@ -41,6 +41,7 @@ Content-Type: application/json
 }
 ```
 
+**응답:**
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiJ9...",
@@ -49,6 +50,14 @@ Content-Type: application/json
 ```
 
 > 발급된 `access_token`을 이후 모든 요청의 `Authorization` 헤더에 사용합니다. (유효기간 1시간)
+
+**Postman Tests 탭 (자동 토큰 저장):**
+```javascript
+var res = pm.response.json();
+pm.environment.set("access_token", res.access_token);
+```
+
+> 위 스크립트를 설정하면 이후 요청에서 `{{access_token}}` 변수로 자동 사용 가능
 
 ---
 
@@ -59,6 +68,7 @@ GET /auth/validate
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
 ```json
 { "valid": true, "clientId": "vensa" }
 ```
@@ -82,6 +92,7 @@ Content-Type: application/json
 }
 ```
 
+**응답:**
 ```json
 {
   "transactionId": "TXN-007",
@@ -102,11 +113,11 @@ Content-Type: application/json
 | `6011111111111117` | CREDIT | `00` | 정상 승인 (한도 500만) |
 | `7011111111111117` | CREDIT | `00` | 정상 승인 (한도 500만) |
 | `8011111111111117` | CREDIT | `00` | 정상 승인 (한도 500만) |
-| `4111111111111111` | DEBIT | `00` | 정상 승인 (체크) |
+| `4111111111111111` | DEBIT  | `00` | 정상 승인 (체크) |
 | `3530111333300000` | CREDIT | `61` | 한도 초과 (잔여 50만) |
-| `5555555555554444` | DEBIT | `51` | 잔액 부족 |
-| `5105105105105100` | DEBIT | `14` | 카드 정지 |
-| `4012888888881881` | DEBIT | `54` | 유효기간 만료 |
+| `5555555555554444` | DEBIT  | `51` | 잔액 부족 |
+| `5105105105105100` | DEBIT  | `14` | 카드 정지 |
+| `4012888888881881` | DEBIT  | `54` | 유효기간 만료 |
 
 ---
 
@@ -124,6 +135,7 @@ Content-Type: application/json
 }
 ```
 
+**응답:**
 ```json
 {
   "transactionId": "TXN-007",
@@ -144,6 +156,7 @@ GET /api/authorizations?date=2026-03-23&status=APPROVED
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
 ```json
 {
   "content": [
@@ -167,6 +180,7 @@ POST /api/settlements/trigger?date=2026-03-23
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
 ```
 2026-03-23 정산 배치 실행 완료
 ```
@@ -182,6 +196,7 @@ GET /api/settlements?date=2026-03-23
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
 ```json
 [
   {
@@ -202,15 +217,55 @@ GET /api/settlements/merchant/MERCHANT-001?from=2026-03-01&to=2026-03-23
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
+```json
+[
+  {
+    "settlementDate": "2026-03-23",
+    "merchantId": "MERCHANT-001",
+    "totalCount": 1,
+    "totalAmount": 50000,
+    "status": "COMPLETED"
+  }
+]
+```
+
 ---
 
-## 3.3 청구 내역 조회
+## 3.3.1 청구 생성
+
+> ⚠️ 청구 내역 조회 전 **반드시 먼저** 실행해야 합니다.
+
+```http
+POST /api/billing/monthly?cardNumber=6011111111111117&month=2026-03
+Authorization: Bearer {access_token}
+```
+
+**응답:**
+```json
+{
+  "cardNumberMasked": "6011-****-****-1117",
+  "billingMonth": "2026-03",
+  "totalAmount": 50000,
+  "transactionCount": 1,
+  "status": "BILLED",
+  "billedAt": "2026-03-23T..."
+}
+```
+
+> 승인 서비스에서 해당 카드의 해당 월 APPROVED 내역을 조회하여 합산합니다.
+> 승인 데이터가 없으면 `totalAmount: 0`, `transactionCount: 0` 으로 생성됩니다.
+
+---
+
+## 3.3.2 청구 내역 조회
 
 ```http
 GET /api/billing/6011111111111117
 Authorization: Bearer {access_token}
 ```
 
+**응답:**
 ```json
 [
   {
@@ -223,7 +278,7 @@ Authorization: Bearer {access_token}
 ]
 ```
 
-> 청구 내역이 없는 경우 먼저 생성: `POST /api/billing/monthly?cardNumber=6011111111111117&month=2026-03`
+> 3.3.1 청구 생성을 먼저 호출하지 않으면 빈 배열 `[]` 반환
 
 ---
 
@@ -241,3 +296,64 @@ Authorization: Bearer {access_token}
 | `61` | 신용 한도 초과 |
 | `94` | 중복 거래 |
 | `96` | 시스템 오류 |
+
+---
+
+## IP 변경 시 수정 위치
+
+모든 하드코딩 IP는 환경변수로 변경되어 있습니다. **IP가 바뀌면 환경변수만 설정하면 됩니다.**
+
+| 환경변수 | 용도 | 기본값 |
+|---------|------|--------|
+| `EUREKA_HOST` | Eureka 서버 IP | `172.30.1.33` |
+| `HOST_IP` | 각 서비스 자신의 IP (Eureka 등록용) | `172.30.1.33` |
+
+> 게이트웨이의 `HOST_IP` 기본값만 `192.168.1.249`로 다릅니다.
+
+### 수정된 파일 목록
+
+| # | 파일 | 변경 내용 |
+|---|------|-----------|
+| 1 | `wooricard-gateway/src/main/resources/application.yaml` | `defaultZone: http://${EUREKA_HOST:172.30.1.33}:8761/eureka/` |
+| 2 | `wooricard-gateway/src/main/resources/application.yaml` | `ip-address: ${HOST_IP:192.168.1.249}` |
+| 3 | `wooricard-config/src/main/resources/application.yaml` | `defaultZone: http://${EUREKA_HOST:172.30.1.33}:8761/eureka/` |
+| 4 | `wooricard-approval-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
+| 5 | `wooricard-settlement-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
+| 6 | `wooricard-billing-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
+
+> `wooricard-eureka`는 `localhost` 고정이므로 변경 불필요.
+> `wooricard-config-repo`는 IP 하드코딩 없음.
+
+### 환경변수 설정 방법
+
+**IntelliJ Run Configuration > Environment Variables:**
+```
+EUREKA_HOST=새IP
+HOST_IP=새IP
+```
+
+**터미널 직접 실행 시:**
+```bash
+EUREKA_HOST=새IP HOST_IP=새IP java -jar 서비스명.jar
+```
+
+### IP 변경 후 재시작 순서
+
+```
+1. wooricard-eureka
+2. wooricard-config
+3. wooricard-approval-service / wooricard-settlement-service / wooricard-billing-service  (순서 무관)
+4. wooricard-gateway
+```
+
+---
+
+## 데이터베이스 초기 데이터
+
+승인 서비스는 시작 시 `data.sql`을 `card_authorization_db`에 자동 삽입합니다.
+수동으로 넣을 경우 반드시 **`card_authorization_db`** 사용
+
+```sql
+USE card_authorization_db;
+SELECT COUNT(*) FROM cards;  -- 9건이면 정상
+```
