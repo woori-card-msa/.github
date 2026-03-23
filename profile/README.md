@@ -8,7 +8,7 @@
 
 # 시연 가이드
 
-> **Base URL:** `http://172.30.1.33:8080`  
+> **Base URL:** `http://172.30.1.33:8080`  (본인의 와이파이 또는 이더넷 ip 환경으로 변경 필요)     
 > **공통 헤더:** `Authorization: Bearer {access_token}`
 
 ---
