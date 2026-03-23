@@ -7,8 +7,19 @@
 ---
 # 시연 가이드
 
-> **Base URL:** `http://172.30.1.33:8080`  (본인의 와이파이 또는 이더넷 ip 환경으로 변경 필요)   
-> **공통 헤더:** `Authorization: Bearer {access_token}`
+> **Base URL:** `{{base_url}}`  
+> **공통 헤더:** `Authorization: Bearer {{access_token}}`
+
+### Postman / APIdog 환경변수 설정
+
+Environment에 아래 두 변수를 등록합니다.
+
+| 변수명 | 예시값 | 설명 |
+|--------|--------|------|
+| `base_url` | `http://172.30.1.33:8080` | 본인 IP로 설정 |
+| `access_token` | _(1.0 토큰 발급 후 자동 저장)_ | 직접 입력 불필요 |
+
+> IP가 바뀌면 Environment의 `base_url` 값만 수정하면 모든 요청에 자동 반영됩니다.
 
 ---
 
@@ -301,41 +312,27 @@ Authorization: Bearer {access_token}
 
 ## IP 변경 시 수정 위치
 
-모든 하드코딩 IP는 환경변수로 변경되어 있습니다. **IP가 바뀌면 환경변수만 설정하면 됩니다.**
+IP는 각 파일에 `${변수명:기본값}` 형식으로 되어 있습니다.
+**IP가 바뀌면 `:` 뒤의 기본값 부분만 새 IP로 직접 수정**하면 됩니다.
 
-| 환경변수 | 용도 | 기본값 |
-|---------|------|--------|
-| `EUREKA_HOST` | Eureka 서버 IP | `172.30.1.33` |
-| `HOST_IP` | 각 서비스 자신의 IP (Eureka 등록용) | `172.30.1.33` |
-
-> 게이트웨이의 `HOST_IP` 기본값만 `192.168.1.249`로 다릅니다.
-
-### 수정된 파일 목록
-
-| # | 파일 | 변경 내용 |
-|---|------|-----------|
-| 1 | `wooricard-gateway/src/main/resources/application.yaml` | `defaultZone: http://${EUREKA_HOST:172.30.1.33}:8761/eureka/` |
-| 2 | `wooricard-gateway/src/main/resources/application.yaml` | `ip-address: ${HOST_IP:192.168.1.249}` |
-| 3 | `wooricard-config/src/main/resources/application.yaml` | `defaultZone: http://${EUREKA_HOST:172.30.1.33}:8761/eureka/` |
-| 4 | `wooricard-approval-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
-| 5 | `wooricard-settlement-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
-| 6 | `wooricard-billing-service/src/main/resources/application.yml` | `ip-address: ${HOST_IP:172.30.1.33}` |
-
-> `wooricard-eureka`는 `localhost` 고정이므로 변경 불필요.
-> `wooricard-config-repo`는 IP 하드코딩 없음.
-
-### 환경변수 설정 방법
-
-**IntelliJ Run Configuration > Environment Variables:**
-```
-EUREKA_HOST=새IP
-HOST_IP=새IP
+```yaml
+# 예시: 새 IP가 192.168.0.10 일 때
+defaultZone: http://${EUREKA_HOST:192.168.0.10}:8761/eureka/
+ip-address: ${HOST_IP:192.168.0.10}
 ```
 
-**터미널 직접 실행 시:**
-```bash
-EUREKA_HOST=새IP HOST_IP=새IP java -jar 서비스명.jar
-```
+> `wooricard-eureka`는 `localhost` 고정이므로 변경이 불필요합니다.   
+
+### 수정 파일 6곳
+
+| # | 파일 | 수정 위치 | 현재 기본값 |
+|---|------|-----------|------------|
+| 1 | `wooricard-gateway/src/main/resources/application.yaml` | `${EUREKA_HOST:`**172.30.1.33**`}` | Eureka 서버 URL |
+| 2 | `wooricard-gateway/src/main/resources/application.yaml` | `${HOST_IP:`**192.168.1.249**`}` | 게이트웨이 자신의 IP |
+| 3 | `wooricard-config/src/main/resources/application.yaml` | `${EUREKA_HOST:`**172.30.1.33**`}` | Eureka 서버 URL |
+| 4 | `wooricard-approval-service/src/main/resources/application.yml` | `${HOST_IP:`**172.30.1.33**`}` | 승인 서비스 자신의 IP |
+| 5 | `wooricard-settlement-service/src/main/resources/application.yml` | `${HOST_IP:`**172.30.1.33**`}` | 정산 서비스 자신의 IP |
+| 6 | `wooricard-billing-service/src/main/resources/application.yml` | `${HOST_IP:`**172.30.1.33**`}` | 청구 서비스 자신의 IP |
 
 ### IP 변경 후 재시작 순서
 
@@ -351,7 +348,7 @@ EUREKA_HOST=새IP HOST_IP=새IP java -jar 서비스명.jar
 ## 데이터베이스 초기 데이터
 
 승인 서비스는 시작 시 `data.sql`을 `card_authorization_db`에 자동 삽입합니다.
-수동으로 넣을 경우 반드시 **`card_authorization_db`** 사용
+수동으로 넣을 경우 반드시 **`card_authorization_db`** 사용 (`approval_db` 아님)
 
 ```sql
 USE card_authorization_db;
