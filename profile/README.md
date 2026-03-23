@@ -32,6 +32,7 @@ Environment에 아래 두 변수를 등록합니다.
 | 3.1.1 | `POST` | `/api/authorizations/request` | 카드 승인 요청 |
 | 3.1.2 | `POST` | `/api/authorizations/cancel` | 카드 승인 취소 |
 | 3.1.3 | `GET` | `/api/authorizations` | 승인 내역 조회 |
+| 3.1.4 | `GET` | `/api/authorization/approved/monthly` | 월별 승인 내역 조회 |
 | 3.2.1 | `POST` | `/api/settlements/trigger` | 수동 정산 실행 |
 | 3.2.2 | `GET` | `/api/settlements` | 날짜별 정산 조회 |
 | 3.2.3 | `GET` | `/api/settlements/merchant/{id}` | 가맹점별 정산 조회 |
@@ -182,6 +183,40 @@ Authorization: Bearer {access_token}
 
 ---
 
+
+## 3.1.4 월별 승인 내역 조회
+
+```http
+GET /api/authorization/approved/monthly?cardNumberMasked=6011-****-****-1117&month=2026-03
+Authorization: Bearer {access_token}
+```
+
+**응답:**
+```json
+[
+  {
+    "transactionId": "TXN-TEST-001",
+    "cardNumberMasked": "6011-****-****-1117",
+    "amount": 50000,
+    "merchantId": "MERCHANT-001",
+    "authorizationDate": "2026-03-20T10:00:00",
+    "status": "APPROVED"
+  },
+  {
+    "transactionId": "TXN-TEST-004",
+    "cardNumberMasked": "6011-****-****-1117",
+    "amount": 75000,
+    "merchantId": "MERCHANT-001",
+    "authorizationDate": "2026-03-20T10:00:00",
+    "status": "APPROVED"
+  }
+]
+```
+> 카드번호와 월 기준으로 APPROVED 상태의 승인 내역을 조회합니다.
+cardNumberMasked는 마스킹된 형식(6011-****-****-1117)으로 입력해야 합니다.
+해당 조건의 데이터가 없으면 빈 배열 [] 반환
+
+---
 ## 3.2.1 수동 정산 실행
 
 > ⚠️ 정산 조회 전 **반드시 먼저** 실행해야 합니다.
